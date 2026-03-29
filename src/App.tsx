@@ -38,12 +38,34 @@ const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode; titl
 );
 
 export function App() {
+  const [apiKeyInput, setApiKeyInput] = useState("");
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem("youtube_api_key") || "");
+  const [showSettings, setShowSettings] = useState(!localStorage.getItem("youtube_api_key"));
+  
   const [searchQuery, setSearchQuery] = useState("");
   const [results, setResults] = useState<VideoResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<VideoResult | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+
+  const saveApiKey = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (apiKeyInput.trim()) {
+      localStorage.setItem("youtube_api_key", apiKeyInput.trim());
+      setApiKey(apiKeyInput.trim());
+      setShowSettings(false);
+    }
+  };
+
+  const removeApiKey = () => {
+    localStorage.removeItem("youtube_api_key");
+    setApiKey("");
+    setApiKeyInput("");
+    setShowSettings(true);
+    setResults([]);
+    setHasSearched(false);
+  };
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,9 +77,18 @@ export function App() {
     setHasSearched(true);
 
     try {
-      const response = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`);
+      if (!apiKey) {
+        throw new Error("Please configure your YouTube API Key in settings first.");
+      }
+
+      const response = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`, {
+        headers: {
+          "x-youtube-api-key": apiKey
+        }
+      });
       if (!response.ok) {
-        throw new Error("Search failed");
+        const errData = await response.json().catch(() => null);
+        throw new Error(errData?.error || "Search failed");
       }
       const data = await response.json();
       setResults(data.results);
@@ -124,11 +155,108 @@ export function App() {
                 </button>
               </div>
             </form>
+            {/* Actions */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowSettings(true)}
+                className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all border border-white/5"
+                title="Settings"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
       <main className="flex-1 relative">
+        {/* Settings Modal */}
+        {showSettings && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
+            <div className="relative w-full max-w-md bg-gray-900 rounded-3xl p-8 shadow-2xl shadow-indigo-500/10 border border-white/10 animate-fade-in-up">
+              {apiKey && (
+                <button
+                  onClick={() => setShowSettings(false)}
+                  className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+              
+              <div className="mb-6">
+                <div className="w-12 h-12 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center mb-4">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-2">Configure API Key</h2>
+                <p className="text-sm text-gray-400">
+                  Required to fetch search results from YouTube. Your key is stored locally in your browser and never leaves your device.
+                </p>
+              </div>
+
+              {apiKey ? (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20">
+                    <div className="flex items-center gap-3">
+                      <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <div>
+                        <p className="text-sm font-medium text-green-400">API Key Configured</p>
+                        <p className="text-xs text-green-400/70 font-mono mt-1">
+                          {apiKey.slice(0, 4)}...{apiKey.slice(-4)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={removeApiKey}
+                    className="w-full py-3 px-4 rounded-xl bg-red-500/10 text-red-400 font-medium hover:bg-red-500/20 transition-colors border border-red-500/20"
+                  >
+                    Remove API Key
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={saveApiKey} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      YouTube API Key
+                    </label>
+                    <input
+                      type="password"
+                      value={apiKeyInput}
+                      onChange={(e) => setApiKeyInput(e.target.value)}
+                      placeholder="AIzaSy..."
+                      className="w-full px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                      required
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full py-3 px-4 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-500 transition-colors"
+                  >
+                    Save & Continue
+                  </button>
+                  <p className="text-xs text-gray-500 text-center leading-relaxed mt-4">
+                    Get a free key from <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 transition-colors underline decoration-indigo-500/30 underline-offset-2">Google Cloud Console</a>.<br/>
+                    Enable <b>YouTube Data API v3</b> and create credentials.
+                  </p>
+                </form>
+              )}
+
+              <p className="text-xs text-gray-600 text-center mt-6 pt-4 border-t border-white/5">
+                PureTube is <a href="https://github.com/Ran-Biz/PureTube" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors underline decoration-gray-500/30">Open Source</a>. Feel free to inspect the code or self-host it yourself.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Video Player Modal */}
         {selectedVideo && (
           <div

@@ -1,8 +1,6 @@
 import { serve } from "bun";
 import index from "./index.html";
 
-const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
-
 interface YouTubeSearchItem {
   id: { videoId: string };
   snippet: {
@@ -31,8 +29,9 @@ const server = serve({
           return Response.json({ error: "Query parameter 'q' is required" }, { status: 400 });
         }
 
-        if (!YOUTUBE_API_KEY) {
-          return Response.json({ error: "YouTube API key not configured" }, { status: 500 });
+        const apiKey = req.headers.get("x-youtube-api-key");
+        if (!apiKey) {
+          return Response.json({ error: "YouTube API key not provided" }, { status: 401 });
         }
 
         try {
@@ -41,7 +40,7 @@ const server = serve({
           searchUrl.searchParams.set("q", query);
           searchUrl.searchParams.set("type", "video");
           searchUrl.searchParams.set("maxResults", "20");
-          searchUrl.searchParams.set("key", YOUTUBE_API_KEY);
+          searchUrl.searchParams.set("key", apiKey);
 
           const response = await fetch(searchUrl.toString());
 
