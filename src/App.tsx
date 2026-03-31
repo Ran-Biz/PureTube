@@ -38,7 +38,7 @@ const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode; titl
 );
 
 export function App() {
-  const rawBasePath = process.env.VITE_BASE_PATH || process.env.NEXT_PUBLIC_BASE_PATH || process.env.BASE_PATH || "";
+  const rawBasePath = typeof process !== "undefined" && process?.env ? (process.env.VITE_BASE_PATH || process.env.NEXT_PUBLIC_BASE_PATH || process.env.BASE_PATH || "") : "";
   const basePath = rawBasePath.endsWith("/") ? rawBasePath.slice(0, -1) : rawBasePath;
 
   const [apiKeyInput, setApiKeyInput] = useState("");
