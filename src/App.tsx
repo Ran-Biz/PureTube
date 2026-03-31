@@ -84,17 +84,31 @@ export function App() {
         throw new Error("Please configure your YouTube API Key in settings first.");
       }
 
-      const response = await fetch(`${basePath}/api/search?q=${encodeURIComponent(searchQuery)}`, {
-        headers: {
-          "x-youtube-api-key": apiKey
-        }
-      });
+      const searchUrl = new URL("https://www.googleapis.com/youtube/v3/search");
+      searchUrl.searchParams.set("part", "snippet");
+      searchUrl.searchParams.set("q", searchQuery);
+      searchUrl.searchParams.set("type", "video");
+      searchUrl.searchParams.set("maxResults", "20");
+      searchUrl.searchParams.set("key", apiKey);
+
+      const response = await fetch(searchUrl.toString());
+
       if (!response.ok) {
         const errData = await response.json().catch(() => null);
-        throw new Error(errData?.error || "Search failed");
+        throw new Error(errData?.error?.message || "YouTube API request failed");
       }
+      
       const data = await response.json();
-      setResults(data.results);
+      const resultsFormatted = data.items.map((item: any) => ({
+        id: item.id.videoId,
+        title: item.snippet.title,
+        description: item.snippet.description,
+        channelTitle: item.snippet.channelTitle,
+        publishedAt: item.snippet.publishedAt,
+        thumbnail: item.snippet.thumbnails.high?.url || item.snippet.thumbnails.medium?.url,
+      }));
+      
+      setResults(resultsFormatted);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
