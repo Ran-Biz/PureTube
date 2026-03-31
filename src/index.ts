@@ -18,11 +18,14 @@ interface YouTubeSearchItem {
 const rawBasePath = process.env.VITE_BASE_PATH || process.env.NEXT_PUBLIC_BASE_PATH || process.env.BASE_PATH || "";
 const basePath = rawBasePath.endsWith("/") ? rawBasePath.slice(0, -1) : rawBasePath;
 
+const isProd = process.env.NODE_ENV === "production";
+
 const server = serve({
   routes: {
-    // Serve index.html for all unmatched routes.
-    [`${basePath}/*`]: index,
-    "/*": index,
+    ...(!isProd ? {
+      [`${basePath}/*`]: index,
+      "/*": index,
+    } : {}),
 
     [`${basePath}/api/search`]: {
       async GET(req) {
@@ -74,7 +77,32 @@ const server = serve({
     },
   },
 
-  development: process.env.NODE_ENV !== "production" && {
+  async fetch(req) {
+    if (isProd) {
+      const url = new URL(req.url);
+      let pathname = url.pathname;
+      if (basePath && pathname.startsWith(basePath)) {
+        pathname = pathname.slice(basePath.length) || "/";
+      }
+      
+      if (pathname !== "/") {
+        // Strip leading slashes to prevent dist//...
+        const filePath = `dist/${pathname.replace(/^\/+/, "")}`;
+        console.log(`[Static] Checking file: ${filePath}`);
+        const file = Bun.file(filePath);
+        if (await file.exists()) {
+          console.log(`[Static] Serving file: ${filePath}`);
+          return new Response(file);
+        } else {
+          console.log(`[Static] File not found: ${filePath}`);
+        }
+      }
+      return new Response(Bun.file("dist/index.html"));
+    }
+    return new Response("Not found", { status: 404 });
+  },
+
+  development: !isProd && {
     // Enable browser hot reloading in development
     hmr: true,
 
