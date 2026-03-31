@@ -38,6 +38,9 @@ const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode; titl
 );
 
 export function App() {
+  const rawBasePath = process.env.VITE_BASE_PATH || process.env.NEXT_PUBLIC_BASE_PATH || process.env.BASE_PATH || "";
+  const basePath = rawBasePath.endsWith("/") ? rawBasePath.slice(0, -1) : rawBasePath;
+
   const [apiKeyInput, setApiKeyInput] = useState("");
   const [apiKey, setApiKey] = useState(() => localStorage.getItem("youtube_api_key") || "");
   const [showSettings, setShowSettings] = useState(!localStorage.getItem("youtube_api_key"));
@@ -81,7 +84,7 @@ export function App() {
         throw new Error("Please configure your YouTube API Key in settings first.");
       }
 
-      const response = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`, {
+      const response = await fetch(`${basePath}/api/search?q=${encodeURIComponent(searchQuery)}`, {
         headers: {
           "x-youtube-api-key": apiKey
         }
@@ -121,7 +124,7 @@ export function App() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             {/* Logo */}
-            <a href="/" className="flex items-center gap-3 group">
+            <a href={basePath || "/"} className="flex items-center gap-3 group">
               <PureTubeLogo className="w-10 h-10 transition-transform group-hover:scale-110" />
               <div className="flex flex-col">
                 <h1 className="text-xl font-bold gradient-text">PureTube</h1>

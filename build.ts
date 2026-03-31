@@ -122,15 +122,23 @@ const entrypoints = [...new Bun.Glob("**.html").scanSync("src")]
   .filter(dir => !dir.includes("node_modules"));
 console.log(`📄 Found ${entrypoints.length} HTML ${entrypoints.length === 1 ? "file" : "files"} to process\n`);
 
+const rawBasePath = process.env.VITE_BASE_PATH || process.env.NEXT_PUBLIC_BASE_PATH || process.env.BASE_PATH || "";
+const basePath = rawBasePath.endsWith("/") ? rawBasePath.slice(0, -1) : rawBasePath;
+const publicPath = basePath ? `${basePath}/` : undefined;
+
 const result = await Bun.build({
   entrypoints,
   outdir,
+  publicPath,
   plugins: [plugin],
   minify: true,
   target: "browser",
   sourcemap: "linked",
   define: {
     "process.env.NODE_ENV": JSON.stringify("production"),
+    "process.env.VITE_BASE_PATH": JSON.stringify(process.env.VITE_BASE_PATH || ""),
+    "process.env.NEXT_PUBLIC_BASE_PATH": JSON.stringify(process.env.NEXT_PUBLIC_BASE_PATH || ""),
+    "process.env.BASE_PATH": JSON.stringify(process.env.BASE_PATH || ""),
   },
   ...cliConfig,
 });

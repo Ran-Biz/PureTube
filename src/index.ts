@@ -15,12 +15,16 @@ interface YouTubeSearchItem {
   };
 }
 
+const rawBasePath = process.env.VITE_BASE_PATH || process.env.NEXT_PUBLIC_BASE_PATH || process.env.BASE_PATH || "";
+const basePath = rawBasePath.endsWith("/") ? rawBasePath.slice(0, -1) : rawBasePath;
+
 const server = serve({
   routes: {
     // Serve index.html for all unmatched routes.
+    [`${basePath}/*`]: index,
     "/*": index,
 
-    "/api/search": {
+    [`${basePath}/api/search`]: {
       async GET(req) {
         const url = new URL(req.url);
         const query = url.searchParams.get("q");
